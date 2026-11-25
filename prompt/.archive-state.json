@@ -1,0 +1,53 @@
+{
+  "version": 1,
+  "sessions": {
+    "6552d01e-eea8-40bc-a12f-fc38f13a15a7": {
+      "size": 507675,
+      "mtimeMs": 1789989916577.214,
+      "title": "你是一个后端/全栈工程师。请",
+      "fileName": "2026-09-21_1918-子代理-你是一个后端-全栈工程师。请-6552d01e.md",
+      "isSub": true,
+      "createdAt": 1789989507992,
+      "updatedAt": 1790163329160,
+      "turns": 1,
+      "events": 438,
+      "cwd": "E:\\testPlatform"
+    },
+    "e8f452b9-626f-4e0d-a7c9-cec542339727": {
+      "size": 603580,
+      "mtimeMs": 1789990002752.867,
+      "title": "你是一个前端工程师。请为一",
+      "fileName": "2026-09-21_1918-子代理-你是一个前端工程师。请为一-e8f452b9.md",
+      "isSub": true,
+      "createdAt": 1789989507990,
+      "updatedAt": 1790163329204,
+      "turns": 1,
+      "events": 789,
+      "cwd": "E:\\testPlatform"
+    },
+    "session-76dc6050-a73c-4fa8-b9ec-f717b5f7c6d8": {
+      "size": 877513,
+      "mtimeMs": 1795588884396.334,
+      "title": "对话自动归档插件化",
+      "fileName": "2026-09-21_1950-对话自动归档插件化-76dc6050.md",
+      "isSub": false,
+      "createdAt": 1789991454605,
+      "updatedAt": 1795588888070,
+      "turns": 3,
+      "events": 947,
+      "cwd": "E:\\testPlatform"
+    },
+    "session-8ad633b3-727d-4a0f-ba1c-7c2c2e1abbd5": {
+      "size": 1320984,
+      "mtimeMs": 1795591166272.1292,
+      "title": "软件测试平台目录结构设计",
+      "fileName": "2026-09-21_1856-软件测试平台目录结构设计-8ad633b3.md",
+      "isSub": false,
+      "createdAt": 1789988192027,
+      "updatedAt": 1795591169951,
+      "turns": 10,
+      "events": 2038,
+      "cwd": "E:\\testPlatform"
+    }
+  }
+}

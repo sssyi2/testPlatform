@@ -1,0 +1,21 @@
+# 依赖与产物
+node_modules/
+.npm-cache/
+.install.log
+
+# Playwright 浏览器（用 PLAYWRIGHT_BROWSERS_PATH 装在本目录内）
+.playwright-browsers/
+
+# 运行时数据：测试项目/用例的数据库、执行记录、截图、导出报告
+data/
+
+# 录屏用的独立数据目录与原始视频（成品在仓库根的 video/）
+.recording-data/
+.recording-video/
+
+# Vite 构建产物（可用 npm run build 重新生成）
+web/dist/
+
+# 临时文件
+*.tmp
+*.log

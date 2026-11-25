@@ -1,0 +1,403 @@
+{
+  "readme": "小商城示例：8 个 API 用例 + 3 个 Web 用例，共 11 个；其中 4 个用例会失败（对应 BUGS.md 里的 4 个缺陷：运费、优惠券折扣、库存校验、前端合计显示）。先启动被测服务 node code/examples/demo-app/server.mjs，再导入本文件。",
+  "project": {
+    "name": "示例：小商城（含缺陷）",
+    "description": "被测服务是一个故意留有缺陷的示例商城：REST API + 服务端渲染页面，端口 4517。",
+    "baseUrl": "http://127.0.0.1:4517",
+    "variables": {
+      "username": "admin",
+      "password": "123456"
+    }
+  },
+  "cases": [
+    {
+      "name": "健康检查接口可用",
+      "type": "api",
+      "description": "GET /api/health 返回 200 且 status=ok，作为可用性冒烟检查",
+      "tags": ["smoke"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "请求健康检查接口",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/health",
+            "timeoutMs": 10000
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "响应码为 200" },
+            { "type": "jsonPath", "op": "equals", "path": "$.status", "expected": "ok", "name": "status 字段为 ok" },
+            { "type": "responseTime", "op": "lte", "expected": 3000, "name": "响应时间小于 3 秒" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "登录成功并返回令牌",
+      "type": "api",
+      "description": "POST /api/login 用 admin/123456 登录，返回 token 并抽取成变量供后续步骤使用",
+      "tags": ["smoke", "login"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "提交登录请求并抽取 token",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/login",
+            "bodyMode": "json",
+            "body": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}"
+          },
+          "extract": [
+            { "name": "token", "from": "json", "path": "$.token" }
+          ],
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "登录成功返回 200" },
+            { "type": "jsonPath", "op": "exists", "path": "$.token", "name": "响应里带 token" },
+            { "type": "jsonPath", "op": "equals", "path": "$.user.name", "expected": "admin", "name": "返回的用户名正确" },
+            { "type": "jsonPath", "op": "equals", "path": "$.user.role", "expected": "admin", "name": "返回的用户角色正确" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "登录失败返回 401 与错误提示",
+      "type": "api",
+      "description": "用错误密码登录，接口应返回 401 与中文错误提示",
+      "tags": ["login", "negative"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "用错误密码登录",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/login",
+            "bodyMode": "json",
+            "body": "{\"username\":\"{{username}}\",\"password\":\"wrong-password\"}"
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 401, "name": "响应码为 401" },
+            { "type": "jsonPath", "op": "contains", "path": "$.error", "expected": "用户名或密码错误", "name": "错误提示文案正确" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "按关键字搜索商品",
+      "type": "api",
+      "description": "GET /api/products?keyword=耳机 只返回名称包含关键字的商品",
+      "tags": ["product", "smoke"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "按关键字查询商品",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products",
+            "query": { "keyword": "耳机" }
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "响应码为 200" },
+            { "type": "jsonPath", "op": "gte", "path": "$.total", "expected": 1, "name": "至少命中 1 件商品" },
+            { "type": "jsonPath", "op": "contains", "path": "$.items[0].name", "expected": "耳机", "name": "命中商品名包含关键字" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "商品详情返回 404 当商品不存在",
+      "type": "api",
+      "description": "查询不存在的商品 ID 应返回 404 与中文错误提示",
+      "tags": ["product", "negative"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "查询不存在的商品",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products/not-exist-id"
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 404, "name": "响应码为 404" },
+            { "type": "jsonPath", "op": "equals", "path": "$.error", "expected": "商品不存在", "name": "错误提示为商品不存在" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "小额订单应收取运费",
+      "type": "api",
+      "description": "59.9 元订单未满 99 元免运费门槛，应收取 10 元运费。当前实现把 shipping 写死为 0（BUGS.md 缺陷 1），本用例应失败",
+      "tags": ["order", "bug"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "先登录获取令牌",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/login",
+            "bodyMode": "json",
+            "body": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}"
+          },
+          "extract": [
+            { "name": "token", "from": "json", "path": "$.token" }
+          ],
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "登录成功返回 200" }
+          ]
+        },
+        {
+          "name": "结算一件 59.9 元商品",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cart/checkout",
+            "headers": { "Authorization": "Bearer {{token}}" },
+            "bodyMode": "json",
+            "body": "{\"items\":[{\"productId\":\"p1001\",\"qty\":1}]}"
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "下单成功返回 200" },
+            { "type": "jsonPath", "op": "equals", "path": "$.subtotal", "expected": 59.9, "name": "商品小计为 59.9" },
+            { "type": "jsonPath", "op": "equals", "path": "$.shipping", "expected": 10, "name": "小额订单运费应为 10 元（此处会失败）" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "优惠券应按商品小计计算折扣",
+      "type": "api",
+      "description": "SAVE10 应按商品小计打 9 折：59.9 × 0.1 = 5.99。当前实现按 (subtotal + 运费) × 0.1 计算，算出 6.99（BUGS.md 缺陷 2），本用例应失败",
+      "tags": ["order", "coupon", "bug"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "先登录获取令牌",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/login",
+            "bodyMode": "json",
+            "body": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}"
+          },
+          "extract": [
+            { "name": "token", "from": "json", "path": "$.token" }
+          ],
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "登录成功返回 200" }
+          ]
+        },
+        {
+          "name": "带 SAVE10 优惠券结算",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cart/checkout",
+            "headers": { "Authorization": "Bearer {{token}}" },
+            "bodyMode": "json",
+            "body": "{\"items\":[{\"productId\":\"p1001\",\"qty\":1}],\"couponCode\":\"SAVE10\"}"
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "下单成功返回 200" },
+            { "type": "jsonPath", "op": "equals", "path": "$.subtotal", "expected": 59.9, "name": "商品小计为 59.9" },
+            { "type": "jsonPath", "op": "equals", "path": "$.discount", "expected": 5.99, "name": "折扣应为 59.9 × 0.1 = 5.99（此处会失败）" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "库存不足应拒绝下单",
+      "type": "api",
+      "description": "无线耳机库存 10，下单 9999 件应返回 400 库存不足。当前实现跳过了库存校验（BUGS.md 缺陷 3），本用例应失败",
+      "tags": ["order", "stock", "bug"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "先登录获取令牌",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/login",
+            "bodyMode": "json",
+            "body": "{\"username\":\"{{username}}\",\"password\":\"{{password}}\"}"
+          },
+          "extract": [
+            { "name": "token", "from": "json", "path": "$.token" }
+          ],
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 200, "name": "登录成功返回 200" }
+          ]
+        },
+        {
+          "name": "下单 9999 件超量商品",
+          "request": {
+            "method": "POST",
+            "url": "{{baseUrl}}/api/cart/checkout",
+            "headers": { "Authorization": "Bearer {{token}}" },
+            "bodyMode": "json",
+            "body": "{\"items\":[{\"productId\":\"p1001\",\"qty\":9999}]}"
+          },
+          "assertions": [
+            { "type": "status", "op": "equals", "expected": 400, "name": "库存不足应返回 400（此处会失败）" },
+            { "type": "jsonPath", "op": "equals", "path": "$.error", "expected": "库存不足", "name": "错误提示为库存不足" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "登录后进入商城",
+      "type": "web",
+      "description": "在登录页输入账号密码并点击登录，应跳转到 /shop 并渲染出商品列表",
+      "tags": ["web", "smoke", "login"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "打开登录页",
+          "action": { "type": "goto", "url": "/" },
+          "assertions": []
+        },
+        {
+          "name": "输入用户名",
+          "action": { "type": "fill", "selector": "[data-testid=\"username\"]", "value": "{{username}}" },
+          "assertions": []
+        },
+        {
+          "name": "输入密码",
+          "action": { "type": "fill", "selector": "[data-testid=\"password\"]", "value": "{{password}}" },
+          "assertions": []
+        },
+        {
+          "name": "点击登录按钮",
+          "action": { "type": "click", "selector": "[data-testid=\"login-btn\"]" },
+          "assertions": []
+        },
+        {
+          "name": "等待商品列表出现",
+          "screenshot": true,
+          "action": { "type": "waitForSelector", "selector": "[data-testid=\"product-list\"]" },
+          "assertions": [
+            { "type": "urlContains", "op": "contains", "expected": "/shop", "name": "地址跳转到 /shop" },
+            { "type": "elementVisible", "op": "truthy", "selector": "[data-testid=\"product-list\"]", "name": "商品列表可见" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "搜索商品过滤列表",
+      "type": "web",
+      "description": "在商城页搜索「耳机」，商品列表应被过滤且仍有匹配结果",
+      "tags": ["web", "product"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "打开登录页",
+          "action": { "type": "goto", "url": "/" },
+          "assertions": []
+        },
+        {
+          "name": "输入用户名",
+          "action": { "type": "fill", "selector": "[data-testid=\"username\"]", "value": "{{username}}" },
+          "assertions": []
+        },
+        {
+          "name": "输入密码",
+          "action": { "type": "fill", "selector": "[data-testid=\"password\"]", "value": "{{password}}" },
+          "assertions": []
+        },
+        {
+          "name": "点击登录按钮",
+          "action": { "type": "click", "selector": "[data-testid=\"login-btn\"]" },
+          "assertions": []
+        },
+        {
+          "name": "等待商品列表出现",
+          "action": { "type": "waitForSelector", "selector": "[data-testid=\"product-list\"]" },
+          "assertions": []
+        },
+        {
+          "name": "输入搜索关键字",
+          "action": { "type": "fill", "selector": "[data-testid=\"search-input\"]", "value": "耳机" },
+          "assertions": []
+        },
+        {
+          "name": "点击搜索按钮",
+          "action": { "type": "click", "selector": "[data-testid=\"search-btn\"]" },
+          "assertions": []
+        },
+        {
+          "name": "等待过滤后的商品列表",
+          "screenshot": true,
+          "action": { "type": "waitForSelector", "selector": "[data-testid=\"product-item\"]" },
+          "assertions": [
+            { "type": "elementCount", "op": "gte", "selector": "[data-testid=\"product-item\"]", "expected": 1, "name": "过滤后至少还有 1 件商品" },
+            { "type": "elementVisible", "op": "truthy", "selector": "[data-testid=\"product-item\"]", "name": "商品条目可见" }
+          ]
+        }
+      ]
+    },
+    {
+      "name": "结算合计金额显示正确",
+      "type": "web",
+      "description": "登录后加入购物车、填优惠券 SAVE10 并结算，合计金额应保留两位小数（如 52.91 元）。当前前端只显示整数且不显示运费行（BUGS.md 缺陷 4），本用例应失败",
+      "tags": ["web", "order", "bug"],
+      "enabled": true,
+      "variables": {},
+      "steps": [
+        {
+          "name": "打开登录页",
+          "action": { "type": "goto", "url": "/" },
+          "assertions": []
+        },
+        {
+          "name": "输入用户名",
+          "action": { "type": "fill", "selector": "[data-testid=\"username\"]", "value": "{{username}}" },
+          "assertions": []
+        },
+        {
+          "name": "输入密码",
+          "action": { "type": "fill", "selector": "[data-testid=\"password\"]", "value": "{{password}}" },
+          "assertions": []
+        },
+        {
+          "name": "点击登录按钮",
+          "action": { "type": "click", "selector": "[data-testid=\"login-btn\"]" },
+          "assertions": []
+        },
+        {
+          "name": "等待商品列表出现",
+          "action": { "type": "waitForSelector", "selector": "[data-testid=\"product-list\"]" },
+          "assertions": []
+        },
+        {
+          "name": "把第一件商品加入购物车",
+          "action": { "type": "click", "selector": "[data-testid=\"add-to-cart\"]" },
+          "assertions": []
+        },
+        {
+          "name": "填写优惠券 SAVE10",
+          "action": { "type": "fill", "selector": "[data-testid=\"coupon-input\"]", "value": "SAVE10" },
+          "assertions": []
+        },
+        {
+          "name": "点击结算按钮",
+          "action": { "type": "click", "selector": "[data-testid=\"checkout-btn\"]" },
+          "assertions": []
+        },
+        {
+          "name": "等待结算结果显示",
+          "screenshot": true,
+          "action": { "type": "waitForSelector", "selector": "[data-testid=\"order-total\"]" },
+          "assertions": [
+            { "type": "elementText", "op": "contains", "selector": "[data-testid=\"order-total\"]", "expected": "合计", "name": "显示合计文案" },
+            { "type": "elementText", "op": "matches", "selector": "[data-testid=\"order-total\"]", "expected": "\\d+\\.\\d{2}", "name": "合计金额保留两位小数（此处会失败）" }
+          ]
+        }
+      ]
+    }
+  ]
+}

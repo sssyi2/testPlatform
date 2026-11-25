@@ -1,0 +1,20 @@
+# 依赖与构建产物
+code/node_modules/
+code/.npm-cache/
+code/web/dist/
+code/.playwright-browsers/
+code/.install.log
+
+# 运行时数据（项目/用例数据库、执行记录、截图）
+code/data/
+
+# 编辑器/系统
+.vscode/
+.idea/
+Thumbs.db
+desktop.ini
+*.tmp
+
+# 注意：以下目录是交付物，禁止忽略
+#   prompt/  ← 对话归档
+#   video/   ← 运行录像

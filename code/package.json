@@ -1,0 +1,35 @@
+{
+  "name": "test-platform",
+  "version": "0.1.0",
+  "private": true,
+  "description": "通用软件测试平台：HTTP/API 用例 + Web UI(Playwright) 用例，含执行引擎、实时日志与报告",
+  "type": "module",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "dev": "node tools/dev.mjs",
+    "dev:server": "node server/src/index.mjs",
+    "build": "vite build",
+    "start": "node server/src/index.mjs",
+    "demo": "node tools/demo.mjs",
+    "install:browsers": "node tools/install-browsers.mjs",
+    "selftest": "node tools/selftest.mjs",
+    "verify": "node tools/verify-all.mjs",
+    "ui-smoke": "node tools/ui-smoke.mjs",
+    "record": "node tools/record-demo.mjs",
+    "archive": "node tools/dsh-archive.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.49.0",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/react": "^18.3.12",
+    "@types/react-dom": "^18.3.1",
+    "@vitejs/plugin-react": "^4.3.4",
+    "typescript": "^5.7.2",
+    "vite": "^6.0.0"
+  }
+}

@@ -1,0 +1,24 @@
+# 项目级 DSH 补丁层（可选）：只影响用本文件启动的会话。
+#   dsh web --patch E:/testPlatform/.dsh/profile-patch.yml
+#
+# 【已不是必需】「每轮对话后自动归档」的主力是宿主插件
+#   C:\Users\sfy\.dsh\plugins\dsh-archive-watch
+# 它装在 web profile 里，随 GUI 启动就自动生效，不依赖本文件、也不需要 --patch。
+#
+# 本文件保留的是「hook 双保险」：额外挂一层 Claude Code 兼容 hook 桥，
+# 在 UserPromptSubmit（收到新消息）与 Stop（每轮结束）时直接调用
+#   E:/testPlatform/code/tools/dsh-archive.mjs --quiet
+# hook 定义见 .dsh/hooks.json。
+#
+# 注意：这里必须是 insert 列表并给行一个 id。历史上本文件写成了
+#   - name: '@deepseek-ai/dsh-hooks-claude-code'
+# （既无 id 也不是 insert），loader 会整个拒收并报
+#   patch: id is required for non-insert patches
+# 结果是 hook 桥从未挂载 —— 现已修正。
+- insert:
+    - id: hooks-claude-code
+      name: '@deepseek-ai/dsh-hooks-claude-code'
+      config:
+        configPath: E:/testPlatform/.dsh/hooks.json
+        projectDir: E:/testPlatform
+        defaultTimeoutMs: 60000

@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"E:/testPlatform/code/tools/dsh-archive.mjs\" --quiet",
+            "timeout": 60
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"E:/testPlatform/code/tools/dsh-archive.mjs\" --quiet",
+            "timeout": 60
+          }
+        ]
+      }
+    ]
+  }
+}
